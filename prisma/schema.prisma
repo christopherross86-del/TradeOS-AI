@@ -1,0 +1,245 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Company {
+  id            String         @id @default(cuid())
+  name          String
+  industry      String?
+  location      String?
+  serviceArea   String?
+  hours         String?
+  phoneNumber   String?        @unique
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  users         User[]
+  aiEmployees   AIEmployee[]
+  customers     Customer[]
+  appointments  Appointment[]
+  invoices      Invoice[]
+  estimates     Estimate[]
+  subscriptions Subscription[]
+  brain         CompanyBrain[]
+  rules         AutomationRule[]
+  calls         CallLog[]
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          UserRole  @default(EMPLOYEE)
+  companyId     String?
+  company       Company?  @relation(fields: [companyId], references: [id])
+  accounts      Account[]
+  sessions      Session[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+enum UserRole {
+  OWNER
+  EMPLOYEE
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model AIEmployee {
+  id        String           @id @default(cuid())
+  name      String
+  type      AIEmployeeType
+  status    AIEmployeeStatus @default(INACTIVE)
+  companyId String
+  company   Company          @relation(fields: [companyId], references: [id])
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+enum AIEmployeeType {
+  SARAH // Receptionist
+  MIKE  // Dispatcher
+  JESSICA // Office Manager
+  ALEX  // Analyst
+}
+
+enum AIEmployeeStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Customer {
+  id             String        @id @default(cuid())
+  name           String
+  phone          String?
+  email          String?
+  address        String?
+  companyId      String
+  company        Company       @relation(fields: [companyId], references: [id])
+  appointments   Appointment[]
+  serviceHistory String?       @db.Text
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model Appointment {
+  id        String            @id @default(cuid())
+  status    AppointmentStatus @default(NEW_REQUEST)
+  companyId String
+  company   Company           @relation(fields: [companyId], references: [id])
+  customerId String
+  customer  Customer          @relation(fields: [customerId], references: [id])
+  scheduledAt DateTime?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+}
+
+enum AppointmentStatus {
+  NEW_REQUEST
+  SCHEDULED
+  ON_THE_WAY
+  WORKING
+  COMPLETED
+  PAID
+}
+
+model Invoice {
+  id        String        @id @default(cuid())
+  number    String
+  amount    Decimal
+  status    InvoiceStatus @default(DRAFT)
+  companyId String
+  company   Company       @relation(fields: [companyId], references: [id])
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+}
+
+model Estimate {
+  id        String         @id @default(cuid())
+  number    String
+  amount    Decimal
+  status    EstimateStatus @default(DRAFT)
+  companyId String
+  company   Company        @relation(fields: [companyId], references: [id])
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+enum EstimateStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+}
+
+model Subscription {
+  id        String             @id @default(cuid())
+  planId    String
+  plan      SubscriptionPlan   @relation(fields: [planId], references: [id])
+  status    SubscriptionStatus
+  companyId String
+  company   Company            @relation(fields: [companyId], references: [id])
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+}
+
+model SubscriptionPlan {
+  id            String         @id @default(cuid())
+  name          String
+  description   String?
+  price         Decimal
+  interval      String         @default("month")
+  features      String?        @db.Text
+  subscriptions Subscription[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  TRIALING
+}
+
+model AutomationRule {
+  id        String  @id @default(cuid())
+  name      String
+  trigger   String
+  action    String
+  enabled   Boolean @default(true)
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+}
+
+model CompanyBrain {
+  id        String  @id @default(cuid())
+  key       String
+  value     String  @db.Text
+  companyId String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, key])
+}
+
+model CallLog {
+  id        String   @id @default(cuid())
+  companyId String
+  from      String
+  to        String
+  duration  Int?
+  status    String
+  recording String?
+  transcript String?
+  createdAt DateTime @default(now())
+  company   Company  @relation(fields: [companyId], references: [id])
+}
