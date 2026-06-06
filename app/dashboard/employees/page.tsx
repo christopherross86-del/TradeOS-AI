@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   PhoneCall,
   CalendarClock,
@@ -212,18 +212,55 @@ function calculateTotal(hired: Set<string>): { total: number; label: string; des
 }
 
 export default function EmployeesPage() {
-  const [hired, setHired] = useState<Set<string>>(new Set(["sarah"]));
+  const [hired, setHired] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
 
-  const toggleHire = (id: string) => {
-    setHired((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const res = await fetch("/api/employees");
+        if (res.ok) {
+          const json = await res.json();
+          const activeIds = new Set(
+            json.filter((e: { status: string }) => e.status === "ACTIVE").map((e: { id: string }) => e.id)
+          );
+          setHired(activeIds);
+        }
+      } catch {
+        // Fallback to defaults
+        setHired(new Set(["sarah"]));
+      } finally {
+        setLoading(false);
       }
-      return next;
-    });
+    };
+    fetchEmployees();
+  }, []);
+
+  const toggleHire = async (id: string) => {
+    const isCurrentlyHired = hired.has(id);
+    const newStatus = isCurrentlyHired ? "INACTIVE" : "ACTIVE";
+
+    try {
+      const res = await fetch(`/api/employees/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (res.ok) {
+        setHired((prev) => {
+          const next = new Set(prev);
+          if (next.has(id)) {
+            next.delete(id);
+          } else {
+            next.add(id);
+          }
+          return next;
+        });
+      }
+    } catch {
+      // Silently fail - UI stays in current state
+    }
   };
 
   const isHired = (id: string) => hired.has(id);

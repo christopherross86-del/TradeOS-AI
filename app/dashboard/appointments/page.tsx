@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
   Calendar,
@@ -11,9 +11,10 @@ import {
   MapPin,
   Wrench,
   CheckCircle2,
+  Loader2,
 } from "lucide-react";
 
-// ─── Types & Data ───────────────────────────────────────
+// ─── Types & Status Config ──────────────────────────────
 
 type AppointmentStatus =
   | "new_request"
@@ -94,19 +95,6 @@ const statusFlow: { key: AppointmentStatus; label: string }[] = [
   { key: "paid", label: "Paid" },
 ];
 
-const appointments: Appointment[] = [
-  { id: "APT-001", customerName: "John Doe", customerId: "C-1001", phone: "(512) 555-0142", address: "1234 Main St, Austin, TX", service: "AC Tune-Up", technician: "Carlos R.", date: "2026-06-07", time: "8:00 AM", duration: "1.5 hrs", status: "scheduled" },
-  { id: "APT-002", customerName: "Lisa Patel", customerId: "C-1006", phone: "(512) 555-0456", address: "8642 Maple Dr, Austin, TX", service: "AC Check (Property 1)", technician: "Carlos R.", date: "2026-06-07", time: "10:00 AM", duration: "1 hr", status: "scheduled" },
-  { id: "APT-003", customerName: "Sarah Johnson", customerId: "C-1002", phone: "(512) 555-0187", address: "5678 Oak Ave, Austin, TX", service: "Duct Inspection", technician: "Mike T.", date: "2026-06-07", time: "2:00 PM", duration: "2 hrs", status: "new_request" },
-  { id: "APT-004", customerName: "Emily Chen", customerId: "C-1004", phone: "(512) 555-0214", address: "2468 Cedar Ln, Austin, TX", service: "Seasonal AC Check", technician: "Carlos R.", date: "2026-06-08", time: "1:00 PM", duration: "1.5 hrs", status: "on_the_way" },
-  { id: "APT-005", customerName: "John Doe", customerId: "C-1001", phone: "(512) 555-0142", address: "1234 Main St, Austin, TX", service: "Thermostat Upgrade", technician: "Maria L.", date: "2026-06-09", time: "10:30 AM", duration: "2 hrs", status: "working" },
-  { id: "APT-006", customerName: "Lisa Patel", customerId: "C-1006", phone: "(512) 555-0456", address: "8642 Maple Dr, Austin, TX", service: "AC Check (Property 2)", technician: "Carlos R.", date: "2026-06-09", time: "10:00 AM", duration: "1 hr", status: "completed" },
-  { id: "APT-007", customerName: "Tom Williams", customerId: "C-1007", phone: "(512) 555-0678", address: "9753 Birch Ct, Cedar Park, TX", service: "AC Tune-Up", technician: "Mike T.", date: "2026-06-10", time: "9:00 AM", duration: "1.5 hrs", status: "scheduled" },
-  { id: "APT-008", customerName: "Emily Chen", customerId: "C-1004", phone: "(512) 555-0214", address: "2468 Cedar Ln, Austin, TX", service: "AC Tune-Up (3 units)", technician: "Carlos R.", date: "2026-06-04", time: "8:00 AM", duration: "3 hrs", status: "paid" },
-  { id: "APT-009", customerName: "Mike Torres", customerId: "C-1003", phone: "(512) 555-0093", address: "910 Elm St, Round Rock, TX", service: "AC Diagnostic", technician: "Maria L.", date: "2026-06-11", time: "11:00 AM", duration: "1 hr", status: "new_request" },
-  { id: "APT-010", customerName: "Lisa Patel", customerId: "C-1006", phone: "(512) 555-0456", address: "8642 Maple Dr, Austin, TX", service: "AC Check (Property 1)", technician: "Carlos R.", date: "2026-06-06", time: "8:00 AM", duration: "1 hr", status: "completed" },
-];
-
 type TabKey = "all" | AppointmentStatus;
 
 const tabs: { key: TabKey; label: string }[] = [
@@ -117,8 +105,51 @@ const tabs: { key: TabKey; label: string }[] = [
 // ─── Component ──────────────────────────────────────────
 
 export default function AppointmentsPage() {
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>("all");
   const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        const res = await fetch("/api/appointments");
+        if (res.ok) {
+          const json = await res.json();
+          setAppointments(json);
+        } else {
+          throw new Error("API error");
+        }
+      } catch {
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAppointments();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-4" />
+          <p className="text-sm text-gray-500">Loading appointments...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
+        <h2 className="text-lg font-bold text-gray-900">Failed to load appointments</h2>
+        <p className="text-sm text-gray-500 mt-1">Please try again later.</p>
+      </div>
+    );
+  }
 
   const filtered = useMemo(() => {
     return appointments.filter((apt) => {

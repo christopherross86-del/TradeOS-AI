@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Users,
@@ -12,12 +12,13 @@ import {
   Calendar,
   Wrench,
   ChevronRight,
-  MoreHorizontal,
   Filter,
   ArrowUpDown,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 
-// ─── Mock Data ───────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────
 
 type Customer = {
   id: string;
@@ -34,121 +35,6 @@ type Customer = {
   notes: string;
 };
 
-const customers: Customer[] = [
-  {
-    id: "C-1001",
-    name: "John Doe",
-    email: "john.doe@email.com",
-    phone: "(512) 555-0142",
-    address: "1234 Main Street",
-    city: "Austin, TX",
-    totalJobs: 12,
-    totalRevenue: 8450,
-    lastAppointment: "2026-06-02",
-    status: "active",
-    avatar: "JD",
-    notes: "Prefers morning appointments. Has a service contract.",
-  },
-  {
-    id: "C-1002",
-    name: "Sarah Johnson",
-    email: "sarah.j@email.com",
-    phone: "(512) 555-0187",
-    address: "5678 Oak Avenue",
-    city: "Austin, TX",
-    totalJobs: 8,
-    totalRevenue: 5200,
-    lastAppointment: "2026-05-28",
-    status: "active",
-    avatar: "SJ",
-    notes: "New customer. Referred by neighbor.",
-  },
-  {
-    id: "C-1003",
-    name: "Mike Torres",
-    email: "mtorres@email.com",
-    phone: "(512) 555-0093",
-    address: "910 Elm Street",
-    city: "Round Rock, TX",
-    totalJobs: 3,
-    totalRevenue: 1800,
-    lastAppointment: "2026-05-15",
-    status: "new",
-    avatar: "MT",
-    notes: "Interested in maintenance plan.",
-  },
-  {
-    id: "C-1004",
-    name: "Emily Chen",
-    email: "emily.chen@email.com",
-    phone: "(512) 555-0214",
-    address: "2468 Cedar Lane",
-    city: "Austin, TX",
-    totalJobs: 25,
-    totalRevenue: 18200,
-    lastAppointment: "2026-06-04",
-    status: "active",
-    avatar: "EC",
-    notes: "VIP customer. Call before scheduling.",
-  },
-  {
-    id: "C-1005",
-    name: "Robert Garcia",
-    email: "rgarcia@email.com",
-    phone: "(512) 555-0321",
-    address: "1357 Pine Road",
-    city: "Pflugerville, TX",
-    totalJobs: 1,
-    totalRevenue: 450,
-    lastAppointment: "2026-04-20",
-    status: "inactive",
-    avatar: "RG",
-    notes: "No response to follow-up calls.",
-  },
-  {
-    id: "C-1006",
-    name: "Lisa Patel",
-    email: "lpatel@email.com",
-    phone: "(512) 555-0456",
-    address: "8642 Maple Drive",
-    city: "Austin, TX",
-    totalJobs: 16,
-    totalRevenue: 11200,
-    lastAppointment: "2026-06-01",
-    status: "active",
-    avatar: "LP",
-    notes: "Has rental properties. Potential for recurring work.",
-  },
-  {
-    id: "C-1007",
-    name: "Tom Williams",
-    email: "tom.w@email.com",
-    phone: "(512) 555-0678",
-    address: "9753 Birch Court",
-    city: "Cedar Park, TX",
-    totalJobs: 5,
-    totalRevenue: 3100,
-    lastAppointment: "2026-05-22",
-    status: "active",
-    avatar: "TW",
-    notes: "Prefers text reminders.",
-  },
-  {
-    id: "C-1008",
-    name: "Amanda Brooks",
-    email: "abrooks@email.com",
-    phone: "(512) 555-0890",
-    address: "3141 Walnut Street",
-    city: "Austin, TX",
-    totalJobs: 0,
-    totalRevenue: 0,
-    lastAppointment: "—",
-    status: "new",
-    avatar: "AB",
-    notes: "Called for quote. Follow up next week.",
-  },
-];
-
 function getStatusBadge(status: Customer["status"]) {
   switch (status) {
     case "active":
@@ -163,9 +49,31 @@ function getStatusBadge(status: Customer["status"]) {
 // ─── List View ───────────────────────────────────────────
 
 export default function CustomersPage() {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "recent" | "jobs">("recent");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive" | "new">("all");
+
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const res = await fetch("/api/customers");
+        if (res.ok) {
+          const json = await res.json();
+          setCustomers(json);
+        } else {
+          throw new Error("API error");
+        }
+      } catch {
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCustomers();
+  }, []);
 
   const filtered = customers
     .filter((c) => {
@@ -185,6 +93,27 @@ export default function CustomersPage() {
 
   const activeCount = customers.filter((c) => c.status === "active").length;
   const totalRevenue = customers.reduce((sum, c) => sum + c.totalRevenue, 0);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-4" />
+          <p className="text-sm text-gray-500">Loading customers...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
+        <h2 className="text-lg font-bold text-gray-900">Failed to load customers</h2>
+        <p className="text-sm text-gray-500 mt-1">Please try again later.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

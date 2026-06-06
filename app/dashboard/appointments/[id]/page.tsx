@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import {
   ArrowLeft,
   Phone,
@@ -221,17 +221,48 @@ const appointmentData: Record<string, AppointmentDetail> = {
 
 export default function AppointmentDetailPage() {
   const params = useParams();
-  const router = useRouter();
-  const appointment = appointmentData[params.id as string];
+  const [appointment, setAppointment] = useState<AppointmentDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  if (!appointment) {
+  useEffect(() => {
+    const fetchAppointment = async () => {
+      try {
+        const res = await fetch(`/api/appointments/${params.id}`);
+        if (res.ok) {
+          const json = await res.json();
+          setAppointment(json);
+        } else {
+          throw new Error("API error");
+        }
+      } catch {
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (params.id) fetchAppointment();
+  }, [params.id]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-4" />
+          <p className="text-sm text-gray-500">Loading appointment...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !appointment) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <AlertCircle className="w-12 h-12 text-gray-300 mb-4" />
+        <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
         <h2 className="text-lg font-bold text-gray-900">Appointment not found</h2>
         <p className="text-sm text-gray-500 mt-1 mb-6">
-          The appointment you&apos;re looking for doesn&apos;t exist.
+          The appointment you&apos;re looking for doesn&apos;t exist or failed to load.
         </p>
         <Link
           href="/dashboard/appointments"
