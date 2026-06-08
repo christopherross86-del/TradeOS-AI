@@ -268,7 +268,7 @@ export default function EmployeesPage() {
   const hiredCount = hired.size;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in">
       {/* Hero Section */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-indigo-900 p-8 md:p-12">
         {/* Background pattern */}
@@ -317,14 +317,15 @@ export default function EmployeesPage() {
 
       {/* Employee Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {employees.map((emp) => {
+        {employees.map((emp, i) => {
           const hired = isHired(emp.id);
           const allRequiredHired = !emp.requires || isHired(emp.requires);
 
           return (
             <div
               key={emp.id}
-              className={`relative group rounded-2xl border-2 transition-all duration-300 ${
+              style={{animationDelay: `${i * 0.1}s`}}
+              className={`relative group rounded-2xl border-2 transition-all duration-300 animate-slide-up ${
                 hired
                   ? `${emp.color.border} shadow-lg scale-[1.01]`
                   : "border-gray-200 shadow-sm hover:shadow-md hover:border-gray-300"

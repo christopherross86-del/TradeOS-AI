@@ -619,7 +619,7 @@ export default function OnboardingPage() {
             )}
 
             {/* Step content */}
-            <div className="min-h-[280px]">
+            <div className="min-h-[280px] animate-fade-in" key={step}>
               {step === 0 && <StepBusinessInfo data={formData} onChange={updateField} />}
               {step === 1 && <StepServiceArea data={formData} onChange={updateField} />}
               {step === 2 && <StepFAQs data={formData} onChange={updateField} />}
