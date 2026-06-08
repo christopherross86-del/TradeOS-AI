@@ -34,7 +34,7 @@ export default function RegisterPage() {
         router.push("/login?registered=true");
       } else {
         const data = await response.json();
-        setError(data.message || "Something went wrong");
+        setError(data.error || data.message || "Something went wrong");
       }
     } catch (err) {
       setError("An unexpected error occurred");
